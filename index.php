@@ -1,4 +1,5 @@
 <?php
+date_default_timezone_set('UTC');
 
 $documentStore = [];
 
@@ -61,41 +62,90 @@ function readSearchTerm($fp)
     return $searchTerm;    
 }
 
-function hasTag($tag)
+function match($string, $term)
 {
-    return true;
+    
+    $string = strtolower(trim($string));
+    $term = strtolower(trim($term));
+    
+    if ($string == '') {
+        return;
+    }
+    $wildcardAt = strpos($term, '*');
+    
+    if ($wildcardAt === false) {
+        return $string == $term;
+    }
+    
+    $compareStringPart = substr($string, 0, $wildcardAt);
+    $compareTermPart = substr($term, 0, $wildcardAt);
+    
+    return $compareStringPart == $compareTermPart;
 }
 
-function createdOnOrAfter($date)
+function hasTag($note, $term)
 {
-    return true;
+    foreach ($note['tag'] as $tag) {
+        if (match($tag, $term)) {
+            return true;
+        }
+    }
+    return false;
 }
 
-function hasKeyword($keyword)
+function createdOnOrAfter($note, $term)
 {
-    return true;    
+    $onOrAfter = strtotime($term);
+
+    $created = strtotime($note['created']);
+    if ($created > $onOrAfter) {
+        return true;
+    }
+
+    return false;
+}
+
+function hasKeyword($note, $keyword)
+{
+    $content = $note['content'];
+    
+    $content = preg_replace("/[^\w\ _\']+/", '', $content);
+    $words = explode(' ', $content);
+    
+    foreach ($words as $word) {
+        if (match($word, $keyword)) {
+            return true;
+        }
+    }
+    return false;
 }
 
 function search($term)
 {
     global $documentStore;
     
-    if (preg_match('/^tag:(.*)/', $term, $matches)) {
-        $func = 'hasTag';
-        $term = $matches[1];
-    } elseif (preg_match('/^created:(.*)/', $term, $matches)) {
-        $func = 'createdOnOrAfter';
-        $term = $matches[1];
-    } else {
-        $func = 'hasKeyword';
-    }
-
+    $term = strtolower($term);
+    $words = explode(' ', $term);
+    
     $found = [];
+    
+    foreach ($words as $word) {
+        if (preg_match('/^tag:(.*)/', $word, $matches)) {
+            $func = 'hasTag';
+            $word = $matches[1];
+        } elseif (preg_match('/^created:(.*)/', $word, $matches)) {
+            $func = 'createdOnOrAfter';
+            $word = $matches[1];
+        } else {
+            $func = 'hasKeyword';
+        }
+            
+        foreach ($documentStore as $note) {
+            if ($func($note, $word)) {
+                $found[] = $note['guid'];
+            }   
+        }
         
-    foreach ($documentStore as $note) {
-        if ($func($term)) {
-            $found[] = $note['guid'];
-        }   
     }
     
     return $found;
@@ -106,16 +156,15 @@ while (!feof($fp)) {
     $command = chop(fgets($fp));
     switch ($command) {
         case 'CREATE':
-        case 'UPDATE':
-        case 'DELETE':
             $note = readDocument($fp);
-        case 'CREATE':
             createDocument($note);
             break;
         case 'UPDATE':
+            $note = readDocument($fp);
             updateDocument($note);
             break;
         case 'DELETE':
+            $note = readDocument($fp);
             deleteDocument($note);
             break;   
         case 'SEARCH':
@@ -135,4 +184,15 @@ while (!feof($fp)) {
             echo 'Error: No valid command found';
             die;
     }
+}
+
+function clarity($string)
+{
+    echo '---------------';
+    echo PHP_EOL;
+    echo $string;
+    echo PHP_EOL;
+    echo '---------------';
+    echo PHP_EOL;
+    
 }
