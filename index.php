@@ -16,7 +16,9 @@ function getXmlString($fp)
         throw new Exception('No valid XML found');
     }
     
-    return $xmlString . '</note>';
+    $xmlString = preg_replace('/&(?!#?[a-z0-9]+;)/', '&amp;', $xmlString);
+    
+    return trim($xmlString) . '</note>';
 }
 
 function readDocument($fp)
@@ -45,21 +47,22 @@ function updateDocument($note)
     }
 }
 
-function deleteDocument($note)
+function deleteDocument($guid)
 {
     global $documentStore;
+    
     for ($i=0; $i<count($documentStore); $i++) {
-        if ($documentStore[$i]['guid'] == $note['guid']) {
+        if ($documentStore[$i]['guid'] == $guid) {
             unset($documentStore[$i]);
             return;
         }
     }
 }
 
-function readSearchTerm($fp)
+function getNextLine($fp)
 {
-    $searchTerm = chop(fgets($fp));
-    return $searchTerm;    
+    $line = chop(fgets($fp));
+    return $line;    
 }
 
 function match($string, $term)
@@ -85,12 +88,21 @@ function match($string, $term)
 
 function hasTag($note, $term)
 {
-    foreach ($note['tag'] as $tag) {
-        if (match($tag, $term)) {
-            return true;
+    if (isset($note['tag'])) {
+        if (is_array($note['tag'])) {
+            foreach ($note['tag'] as $tag) {
+                if (match($tag, $term)) {
+                    return true;
+                }
+            }
+            return false;
+        } else {
+            if (match($note['tag'], $term)) {
+                return true;
+            }
+            return false;
         }
     }
-    return false;
 }
 
 function createdOnOrAfter($note, $term)
@@ -174,11 +186,11 @@ while (!feof($fp)) {
             updateDocument($note);
             break;
         case 'DELETE':
-            $note = readDocument($fp);
-            deleteDocument($note);
+            $guid = getNextLine($fp);
+            deleteDocument($guid);
             break;   
         case 'SEARCH':
-            $term = readSearchTerm($fp);
+            $term = getNextLine($fp);
             $notes = search($term);
             if (count($notes) == 0) {
                 echo PHP_EOL;
