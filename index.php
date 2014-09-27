@@ -53,13 +53,13 @@ function deleteDocument($guid)
     
     for ($i=0; $i<count($documentStore); $i++) {
         if ($documentStore[$i]['guid'] == $guid) {
-            unset($documentStore[$i]);
+            array_splice($documentStore, $i);
             return;
         }
     }
 }
 
-function getNextLine($fp)
+function readNextLine($fp)
 {
     $line = chop(fgets($fp));
     return $line;    
@@ -186,11 +186,11 @@ while (!feof($fp)) {
             updateDocument($note);
             break;
         case 'DELETE':
-            $guid = getNextLine($fp);
+            $guid = readNextLine($fp);
             deleteDocument($guid);
             break;   
         case 'SEARCH':
-            $term = getNextLine($fp);
+            $term = readNextLine($fp);
             $notes = search($term);
             if (count($notes) == 0) {
                 echo PHP_EOL;
