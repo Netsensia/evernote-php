@@ -129,26 +129,36 @@ function search($term)
     
     $found = [];
     
-    foreach ($words as $word) {
-        if (preg_match('/^tag:(.*)/', $word, $matches)) {
-            $func = 'hasTag';
-            $word = $matches[1];
-        } elseif (preg_match('/^created:(.*)/', $word, $matches)) {
-            $func = 'createdOnOrAfter';
-            $word = $matches[1];
-        } else {
-            $func = 'hasKeyword';
+    foreach ($documentStore as $note) {
+        $matchesAll = true;
+        foreach ($words as $word) {
+            if (preg_match('/^tag:(.*)/', $word, $matches)) {
+                $func = 'hasTag';
+                $word = $matches[1];
+            } elseif (preg_match('/^created:(.*)/', $word, $matches)) {
+                $func = 'createdOnOrAfter';
+                $word = $matches[1];
+            } else {
+                $func = 'hasKeyword';
+            }
+                
+            if (!$func($note, $word)) {
+                $matchesAll = false;
+                break;
+            }
         }
-            
-        foreach ($documentStore as $note) {
-            if ($func($note, $word)) {
-                $found[] = $note['guid'];
-            }   
+        if ($matchesAll) {
+            $found[] = $note;
         }
-        
     }
     
+    usort($found, 'sortByTime');
     return $found;
+}
+
+function sortByTime($a, $b)
+{
+    return strtotime($a['created']) < strtotime($b['created']) ? -1 : 1; 
 }
 
 while (!feof($fp)) {
@@ -169,13 +179,13 @@ while (!feof($fp)) {
             break;   
         case 'SEARCH':
             $term = readSearchTerm($fp);
-            $guids = search($term);
-            if (count($guids) == 0) {
+            $notes = search($term);
+            if (count($notes) == 0) {
                 echo PHP_EOL;
             } else {
                 $output = '';
-                foreach ($guids as $guid) {
-                    $output .= $guid . ',';
+                foreach ($notes as $note) {
+                    $output .= $note['guid'] . ',';
                 }
                 echo substr($output, 0, strlen($output)-1) . PHP_EOL;
             }
