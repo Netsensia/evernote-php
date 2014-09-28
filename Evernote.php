@@ -1,6 +1,38 @@
 <?php
 date_default_timezone_set('UTC');
 
+class NoteCollection
+{
+    /**
+     * @var array
+     */
+    private $note = [];
+    
+    /**
+     * @param Note $note
+     */
+    public function addNote(Note $note)
+    {
+        $this->note[] = $note;        
+    }
+    
+    public function sortByDate()
+    {
+        usort($this->note, 'NoteCollection::sortByTime');    
+    }
+    
+    static function sortByTime($a, $b)
+    {
+        $result = $a->getCreated() < $b->getCreated() ? -1 : 1;
+        return $result;
+    }
+    
+    public function getNotes()
+    {
+        return $this->note;
+    }
+}
+
 class Note
 {
     /**
@@ -24,11 +56,6 @@ class Note
      * @var number
      */
     private $created;
-    
-    static function sortByTime($a, $b)
-    {
-        return strtotime($a->getCreated()) < strtotime($b->getCreated()) ? -1 : 1; 
-    }
     
 	/**
      * @return the $guid
@@ -141,16 +168,16 @@ class Note
 
 class Evernote 
 {
-    private $documentStore = [];
+    private $noteDatabase = [];
     
     function getDocumentCount()
     {
-        return count($this->documentStore);
+        return count($this->noteDatabase);
     }
     
-    function getDocument($guid)
+    function getNote($guid)
     {
-        foreach ($this->documentStore as &$storedNote) {
+        foreach ($this->noteDatabase as &$storedNote) {
             if ($storedNote->getGuid() == $guid) {
                 return $storedNote;
             }
@@ -192,14 +219,14 @@ class Evernote
         return $this->makeNoteFromXml($xmlString);
     }
     
-    function createDocument($note)
+    function createNote($note)
     {
-        $this->documentStore[] = $note;
+        $this->noteDatabase[] = $note;
     }
     
-    function updateDocument($note)
+    function updateNote($note)
     {
-        foreach ($this->documentStore as &$storedNote) {
+        foreach ($this->noteDatabase as &$storedNote) {
             if ($storedNote->getGuid() == $note->getGuid()) {
                 $storedNote = $note;
             }
@@ -212,13 +239,13 @@ class Evernote
         return array_values($array);
     }
     
-    function deleteDocument($guid)
+    function deleteNote($guid)
     {
-        for ($i=0; $i<count($this->documentStore); $i++) {
-            if ($this->documentStore[$i]->getGuid() == $guid) {
-                $this->documentStore =
+        for ($i=0; $i<count($this->noteDatabase); $i++) {
+            if ($this->noteDatabase[$i]->getGuid() == $guid) {
+                $this->noteDatabase =
                     $this->removeArrayElement(
-                        $this->documentStore,
+                        $this->noteDatabase,
                         $i
                     );
                 return;
@@ -295,9 +322,9 @@ class Evernote
         $term = strtolower($term);
         $words = explode(' ', $term);
         
-        $found = [];
+        $noteCollection = new NoteCollection();
         
-        foreach ($this->documentStore as $note) {
+        foreach ($this->noteDatabase as $note) {
             $matchesAll = true;
             foreach ($words as $word) {
                 if (preg_match('/^tag:(.*)/', $word, $matches)) {
@@ -316,17 +343,18 @@ class Evernote
                 }
             }
             if ($matchesAll) {
-                $found[] = $note;
+                $noteCollection->addNote($note);
             }
         }
         
-        usort($found, 'Note::sortByTime');
-        return $found;
+        $noteCollection->sortByDate();
+        return $noteCollection;
     }
     
-    function go()
+    function go($input = "php://stdin", $output = "php://stdout")
     {
-        $fp = fopen("php://stdin", "r");
+        $fp = fopen($input, "r");
+        $fpo = fopen($output, "w");
         
         while (!feof($fp)) {
             
@@ -334,27 +362,28 @@ class Evernote
             switch ($command) {
                 case 'CREATE':
                     $note = $this->readNote($fp);
-                    $this->createDocument($note);
+                    $this->createNote($note);
                     break;
                 case 'UPDATE':
                     $note = $this->readNote($fp);
-                    $this->updateDocument($note);
+                    $this->updateNote($note);
                     break;
                 case 'DELETE':
                     $guid = $this->readNextLine($fp);
-                    $this->deleteDocument($guid);
+                    $this->deleteNote($guid);
                     break;   
                 case 'SEARCH':
                     $term = $this->readNextLine($fp);
-                    $notes = $this->search($term);
+                    $noteCollection = $this->search($term);
+                    $notes = $noteCollection->getNotes();
                     if (count($notes) == 0) {
-                        echo PHP_EOL;
+                        fprintf($fpo, PHP_EOL);
                     } else {
-                        $output = '';
+                        $results = '';
                         foreach ($notes as $note) {
-                            $output .= $note->getGuid() . ',';
+                            $results .= $note->getGuid() . ',';
                         }
-                        echo substr($output, 0, strlen($output)-1) . PHP_EOL;
+                        fprintf($fpo, substr($results, 0, strlen($results)-1) . PHP_EOL);
                     }
                     break;
                 default:
@@ -362,6 +391,9 @@ class Evernote
                     die;
             }
         }
+        
+        fclose($fpo);
+        fclose($fp);
     }
 }
 
