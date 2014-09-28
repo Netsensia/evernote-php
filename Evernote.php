@@ -1,6 +1,144 @@
 <?php
 date_default_timezone_set('UTC');
 
+class Note
+{
+    /**
+     * @var string
+     */
+    private $guid;
+
+    /**
+     * @var array
+     */
+    private $tag;
+    
+    /**
+     * @var string
+     */
+    private $content;
+    
+    /**
+     * Timestamp
+     * 
+     * @var number
+     */
+    private $created;
+    
+    static function sortByTime($a, $b)
+    {
+        return strtotime($a->getCreated()) < strtotime($b->getCreated()) ? -1 : 1; 
+    }
+    
+	/**
+     * @return the $guid
+     */
+    public function getGuid()
+    {
+        return $this->guid;
+    }
+
+	/**
+     * @param string $guid
+     */
+    public function setGuid($guid)
+    {
+        $this->guid = $guid;
+    }
+
+	/**
+     * @return the $tag
+     */
+    public function getTag()
+    {
+        return $this->tag;
+    }
+
+	/**
+     * @param multitype: $tag
+     */
+    public function setTag($tag)
+    {
+        $this->tag = $tag;
+    }
+
+	/**
+     * @return the $content
+     */
+    public function getContent()
+    {
+        return $this->content;
+    }
+
+	/**
+     * @param string $content
+     */
+    public function setContent($content)
+    {
+        $this->content = $content;
+    }
+
+	/**
+     * @return the $created
+     */
+    public function getCreated()
+    {
+        return $this->created;
+    }
+
+	/**
+     * @param number $created
+     */
+    public function setCreated($created)
+    {
+        $this->created = $created;
+    }
+
+    public function getArrayCopy()
+    {
+        $array = [
+            'guid' => $this->guid,
+        ];
+        
+        if (count($this->tag) == 1) {
+            $array['tag'] = $this->tag[0];
+        }
+        
+        if (count($this->tag) > 1) {
+            $array['tag'] = $this->tag;
+        }
+        
+        $array = array_merge(
+            $array,
+            [
+                'content' => $this->content,
+                'created' => date('Y-m-d\TH:i:s\Z', $this->created),
+            ]   
+        );
+        
+        return $array;
+    }
+    
+    public function exchangeArray($array)
+    {
+        $this->setGuid($array['guid']);
+        $this->setContent($array['content']);
+        $this->setCreated(strtotime($array['created']));
+        
+        if (isset($array['tag'])) {
+            if (is_array($array['tag'])) {
+                $tag = $array['tag'];
+            } else {
+                $tag = [$array['tag']];
+            }
+        } else {
+            $tag = [];
+        }
+        
+        $this->setTag($tag);
+    }
+}
+
 class Evernote 
 {
     private $documentStore = [];
@@ -13,7 +151,7 @@ class Evernote
     function getDocument($guid)
     {
         foreach ($this->documentStore as &$storedNote) {
-            if ($storedNote['guid'] == $guid) {
+            if ($storedNote->getGuid() == $guid) {
                 return $storedNote;
             }
         }
@@ -41,7 +179,9 @@ class Evernote
     {
         $xmlObj = simplexml_load_string($xmlString);
         $json = json_encode($xmlObj);
-        $note = json_decode($json, true);
+        $noteArray = json_decode($json, true);
+        $note = new Note();
+        $note->exchangeArray($noteArray);
         
         return $note;    
     }
@@ -52,7 +192,7 @@ class Evernote
         return $this->makeNoteFromXml($xmlString);
     }
     
-    function createDocument( $note)
+    function createDocument($note)
     {
         $this->documentStore[] = $note;
     }
@@ -60,7 +200,7 @@ class Evernote
     function updateDocument($note)
     {
         foreach ($this->documentStore as &$storedNote) {
-            if ($storedNote['guid'] == $note['guid']) {
+            if ($storedNote->getGuid() == $note->getGuid()) {
                 $storedNote = $note;
             }
         }
@@ -75,7 +215,7 @@ class Evernote
     function deleteDocument($guid)
     {
         for ($i=0; $i<count($this->documentStore); $i++) {
-            if ($this->documentStore[$i]['guid'] == $guid) {
+            if ($this->documentStore[$i]->getGuid() == $guid) {
                 $this->documentStore =
                     $this->removeArrayElement(
                         $this->documentStore,
@@ -94,7 +234,6 @@ class Evernote
     
     function match($string, $term)
     {
-        
         $string = strtolower(trim($string));
         $term = strtolower(trim($term));
         
@@ -115,29 +254,21 @@ class Evernote
     
     function hasTag($note, $term)
     {
-        if (isset($note['tag'])) {
-            if (is_array($note['tag'])) {
-                foreach ($note['tag'] as $tag) {
-                    if ($this->match($tag, $term)) {
-                        return true;
-                    }
-                }
-                return false;
-            } else {
-                if ($this->match($note['tag'], $term)) {
-                    return true;
-                }
-                return false;
+        $tags = $note->getTag();
+        
+        foreach ($tags as $tag) {
+            if ($this->match($tag, $term)) {
+                return true;
             }
         }
+        return false;
     }
     
     function createdOnOrAfter($note, $term)
     {
         $onOrAfter = strtotime($term);
     
-        $created = strtotime($note['created']);
-        if ($created > $onOrAfter) {
+        if ($note->getCreated() > $onOrAfter) {
             return true;
         }
     
@@ -146,7 +277,7 @@ class Evernote
     
     function hasKeyword($note, $keyword)
     {
-        $content = $note['content'];
+        $content = $note->getContent();
         
         $content = preg_replace("/[^\w\ _\'\-]+/", '', $content);
         $words = explode(' ', $content);
@@ -189,13 +320,8 @@ class Evernote
             }
         }
         
-        usort($found, 'Evernote::sortByTime');
+        usort($found, 'Note::sortByTime');
         return $found;
-    }
-    
-    static function sortByTime($a, $b)
-    {
-        return strtotime($a['created']) < strtotime($b['created']) ? -1 : 1; 
     }
     
     function go()
@@ -226,7 +352,7 @@ class Evernote
                     } else {
                         $output = '';
                         foreach ($notes as $note) {
-                            $output .= $note['guid'] . ',';
+                            $output .= $note->getGuid() . ',';
                         }
                         echo substr($output, 0, strlen($output)-1) . PHP_EOL;
                     }

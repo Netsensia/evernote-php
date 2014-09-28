@@ -35,13 +35,16 @@ class EvernoteTest extends PHPUnit_Framework_TestCase
     public function testCreateDocument()
     {
         $evernote = new Evernote();
-        $evernote->createDocument($this->note[0]);
-
+        
+        $note = new Note();
+        $note->exchangeArray($this->note[0]);
+        $evernote->createDocument($note);
+        
         $this->assertEquals($evernote->getDocumentCount(), 1);
         
         $document = $evernote->getDocument('GUID1');
-        $this->assertEquals($document, $this->note[0]);
-        $this->assertEquals($document['guid'], 'GUID1');
+        $this->assertEquals($this->note[0], $document->getArrayCopy());
+        $this->assertEquals($document->getGuid(), 'GUID1');
     }
     
     public function testRemoveArrayElement()
@@ -56,14 +59,17 @@ class EvernoteTest extends PHPUnit_Framework_TestCase
     public function testDeleteDocument()
     {
         $evernote = new Evernote();
-        $evernote->createDocument($this->note[0]);
-        $evernote->createDocument($this->note[2]);
-        $evernote->createDocument($this->note[1]);
+        
+        for ($i=0; $i<3; $i++) {
+            $note = new Note();
+            $note->exchangeArray($this->note[$i]);
+            $evernote->createDocument($note);
+        }
         
         $this->assertEquals($evernote->getDocumentCount(), 3);
-        $this->assertEquals($evernote->getDocument('GUID1'), $this->note[0]);
-        $this->assertEquals($evernote->getDocument('GUID2'), $this->note[1]);
-        $this->assertEquals($evernote->getDocument('GUID3'), $this->note[2]);
+        $this->assertEquals($this->note[0], $evernote->getDocument('GUID1')->getArrayCopy());
+        $this->assertEquals($this->note[1], $evernote->getDocument('GUID2')->getArrayCopy());
+        $this->assertEquals($this->note[2], $evernote->getDocument('GUID3')->getArrayCopy());
         
         $evernote->deleteDocument('GUID2');
         
