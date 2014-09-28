@@ -1,9 +1,9 @@
 <?php
-include 'Evernote.php';
+include 'NoteStore.php';
 
 date_default_timezone_set('UTC');
 
-$evernote = new Evernote();
+$evernote = new NoteStore();
 $evernote->go('tests/input1');
 
 

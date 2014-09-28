@@ -1,10 +1,10 @@
 <?php
 include '../vendor/autoload.php';
-include '../Evernote.php';
+include '../NoteStore.php';
 
 define('RUNNING_UNIT_TESTS', true);
 
-class EvernoteTest extends PHPUnit_Framework_TestCase
+class NoteStoreTest extends PHPUnit_Framework_TestCase
 {
     private $note = [
         [
@@ -34,26 +34,17 @@ class EvernoteTest extends PHPUnit_Framework_TestCase
     
     public function testCreateNote()
     {
-        $evernote = new Evernote();
+        $noteStore = new NoteStore();
         
         $note = new Note();
         $note->exchangeArray($this->note[0]);
-        $evernote->updateNote($note);
+        $noteStore->updateNote($note);
         
-        $this->assertEquals($evernote->getDocumentCount(), 1);
+        $this->assertEquals($noteStore->getNoteCount(), 1);
         
-        $document = $evernote->getNote('GUID1');
+        $document = $noteStore->getNote('GUID1');
         $this->assertEquals($this->note[0], $document->getArrayCopy());
         $this->assertEquals($document->getGuid(), 'GUID1');
-    }
-    
-    public function testRemoveArrayElement()
-    {
-        $array = [1,2,3,4,5,6];
-        $evernote = new Evernote();
-        $array = $evernote->removeArrayElement($array, 3);
-        
-        $this->assertEquals([1,2,3,5,6], $array);
     }
     
     public function testSortNoteCollection()
@@ -76,89 +67,88 @@ class EvernoteTest extends PHPUnit_Framework_TestCase
     
     public function testDeleteNote()
     {
-        $evernote = new Evernote();
+        $noteStore = new NoteStore();
     
         for ($i=0; $i<3; $i++) {
             $note = new Note();
             $note->exchangeArray($this->note[$i]);
-            $evernote->updateNote($note);
+            $noteStore->updateNote($note);
         }
     
-        $this->assertEquals($evernote->getDocumentCount(), 3);
-        $this->assertEquals($this->note[0], $evernote->getNote('GUID1')->getArrayCopy());
-        $this->assertEquals($this->note[1], $evernote->getNote('GUID2')->getArrayCopy());
-        $this->assertEquals($this->note[2], $evernote->getNote('GUID3')->getArrayCopy());
+        $this->assertEquals($noteStore->getNoteCount(), 3);
+        $this->assertEquals($this->note[0], $noteStore->getNote('GUID1')->getArrayCopy());
+        $this->assertEquals($this->note[1], $noteStore->getNote('GUID2')->getArrayCopy());
+        $this->assertEquals($this->note[2], $noteStore->getNote('GUID3')->getArrayCopy());
     
-        $evernote->deleteNote('GUID2');
-        $this->assertNull($evernote->getNote('GUID2'));
-        $this->assertEquals($evernote->getDocumentCount(), 2);
+        $noteStore->deleteNote('GUID2');
+        $this->assertNull($noteStore->getNote('GUID2'));
+        $this->assertEquals($noteStore->getNoteCount(), 2);
     
-        $evernote->deleteNote('GUID1');
-        $this->assertNull($evernote->getNote('GUID1'));
-        $this->assertEquals($evernote->getDocumentCount(), 1);
+        $noteStore->deleteNote('GUID1');
+        $this->assertNull($noteStore->getNote('GUID1'));
+        $this->assertEquals($noteStore->getNoteCount(), 1);
     
-        $evernote->deleteNote('GUID3');
-        $this->assertNull($evernote->getNote('GUID3'));
-        $this->assertEquals($evernote->getDocumentCount(), 0);
+        $noteStore->deleteNote('GUID3');
+        $this->assertNull($noteStore->getNote('GUID3'));
+        $this->assertEquals($noteStore->getNoteCount(), 0);
     }
     
     public function testUpdateNote()
     {
-        $evernote = new Evernote();
+        $noteStore = new NoteStore();
     
         for ($i=0; $i<3; $i++) {
             $note = new Note();
             $note->exchangeArray($this->note[$i]);
-            $evernote->updateNote($note);
+            $noteStore->updateNote($note);
         }
     
-        $this->assertEquals($evernote->getDocumentCount(), 3);
-        $this->assertEquals($this->note[0], $evernote->getNote('GUID1')->getArrayCopy());
-        $this->assertEquals($this->note[1], $evernote->getNote('GUID2')->getArrayCopy());
-        $this->assertEquals($this->note[2], $evernote->getNote('GUID3')->getArrayCopy());
+        $this->assertEquals($noteStore->getNoteCount(), 3);
+        $this->assertEquals($this->note[0], $noteStore->getNote('GUID1')->getArrayCopy());
+        $this->assertEquals($this->note[1], $noteStore->getNote('GUID2')->getArrayCopy());
+        $this->assertEquals($this->note[2], $noteStore->getNote('GUID3')->getArrayCopy());
     
-        $note = $evernote->getNote('GUID2');
+        $note = $noteStore->getNote('GUID2');
         $newContent = 'New Content';
         $note->setContent($newContent);
-        $evernote->updateNote($note);
-        $newNote = $evernote->getNote('GUID2');
+        $noteStore->updateNote($note);
+        $newNote = $noteStore->getNote('GUID2');
         
-        $this->assertEquals($evernote->getDocumentCount(), 3);
+        $this->assertEquals($noteStore->getNoteCount(), 3);
         $this->assertEquals($newContent, $newNote->getContent());
     }
     
     public function testMatch()
     {
-        $evernote = new Evernote();
+        $noteStore = new NoteStore();
         
         // Simple match
-        $this->assertTrue($evernote->match('test', 'test'));   
-        $this->assertFalse($evernote->match('test2', 'test'));
+        $this->assertTrue(Util::match('test', 'test'));   
+        $this->assertFalse(Util::match('test2', 'test'));
         
         // Wildcard match
-        $this->assertTrue($evernote->match('test2', 'test*'));
-        $this->assertFalse($evernote->match('test2', 'test3*'));
-        $this->assertTrue($evernote->match('test2', 't*'));
-        $this->assertTrue($evernote->match('test2', 'test*'));
+        $this->assertTrue(Util::match('test2', 'test*'));
+        $this->assertFalse(Util::match('test2', 'test3*'));
+        $this->assertTrue(Util::match('test2', 't*'));
+        $this->assertTrue(Util::match('test2', 'test*'));
         
     }
     
     public function testInputs()
     {
         for ($i=1; $i<=4; $i++) {
-            $evernote = new Evernote();
+            $noteStore = new NoteReader();
             $inputFile = 'input' . $i;
             $outputFile = 'output' . $i;
             $expectedOutput = 'expected' . $i;
-            $evernote->go($inputFile, $outputFile);
+            $noteStore->go($inputFile, $outputFile);
             $this->assertFileEquals($expectedOutput, $outputFile, 'Test case ' . $i);
         }
     }
     
     public function testLoad()
     {
-        $evernote = new Evernote();
-        $evernote->go('inputload', 'outputload');
+        $noteStore = new NoteReader();
+        $noteStore->go('inputload', 'outputload');
     }
-
 }
