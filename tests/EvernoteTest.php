@@ -6,30 +6,69 @@ define('RUNNING_UNIT_TESTS', true);
 
 class EvernoteTest extends PHPUnit_Framework_TestCase
 {
-    public function testCreateDocument()
-    {
-        $note = [
-            'guid' => 1,
+    private $note = [
+        [
+            'guid' => 'GUID1',
             'created' => '2014-05-03T11:13:08Z',
             'tag' => [
                 'poetry',
                 'byron',
             ],
-            'content' =>  
-                'The Son of Love and Lord of War I sing; ' .
-                'Him who bade England bow to Normandy, ' .
-                'And left the name of Conqueror more than King ' .
-                'To his unconquerable dynasty. ' .
-                'Not fanned alone by Victory\'s fleeting wing, ' .
-                'He reared his bold and brilliant throne on high; ' .
-                'The Bastard kept, like lions, his prey fast, ' .
+            'content' =>
+                'The Son of Love and Lord of War I sing; '
+        ],
+        [
+            'guid' => 'GUID2',
+            'created' => '2014-06-03T11:13:08Z',
+            'content' =>
                 'And Britain\'s bravest Victor was the last.'
-        ];
-        
+        ],
+        [
+            'guid' => 'GUID3',
+            'created' => '2014-03-03T11:13:08Z',
+            'tag' => 'poetry',
+            'content' =>
+                'The Bastard kept, like lions, his prey fast, '
+        ],
+    ];
+    
+    public function testCreateDocument()
+    {
         $evernote = new Evernote();
-        $evernote->createDocument($note);
+        $evernote->createDocument($this->note[0]);
 
         $this->assertEquals($evernote->getDocumentCount(), 1);
-        $this->assertEquals($evernote->getDocument(0), $note);
+        
+        $document = $evernote->getDocument('GUID1');
+        $this->assertEquals($document, $this->note[0]);
+        $this->assertEquals($document['guid'], 'GUID1');
+    }
+    
+    public function testRemoveArrayElement()
+    {
+        $array = [1,2,3,4,5,6];
+        $evernote = new Evernote();
+        $array = $evernote->removeArrayElement($array, 3);
+        
+        $this->assertEquals([1,2,3,5,6], $array);
+    }
+    
+    public function testDeleteDocument()
+    {
+        $evernote = new Evernote();
+        $evernote->createDocument($this->note[0]);
+        $evernote->createDocument($this->note[2]);
+        $evernote->createDocument($this->note[1]);
+        
+        $this->assertEquals($evernote->getDocumentCount(), 3);
+        $this->assertEquals($evernote->getDocument('GUID1'), $this->note[0]);
+        $this->assertEquals($evernote->getDocument('GUID2'), $this->note[1]);
+        $this->assertEquals($evernote->getDocument('GUID3'), $this->note[2]);
+        
+        $evernote->deleteDocument('GUID2');
+        
+        $this->assertNull($evernote->getDocument('GUID2'));
+        $this->assertEquals($evernote->getDocumentCount(), 2);
+        
     }
 }

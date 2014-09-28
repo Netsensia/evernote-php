@@ -10,13 +10,15 @@ class Evernote
         return count($this->documentStore);
     }
     
-    function getDocument($documentNumber)
+    function getDocument($guid)
     {
-        if (isset($this->documentStore[$documentNumber])) {
-            return $this->documentStore[$documentNumber];
-        } else {
-            return null;
+        foreach ($this->documentStore as &$storedNote) {
+            if ($storedNote['guid'] == $guid) {
+                return $storedNote;
+            }
         }
+        
+        return null;
     }
     
     function getXmlString($fp)
@@ -64,11 +66,21 @@ class Evernote
         }
     }
     
-    function deleteDocument( $guid)
+    function removeArrayElement($array, $i)
+    {
+        unset($array[$i]);
+        return array_values($array);
+    }
+    
+    function deleteDocument($guid)
     {
         for ($i=0; $i<count($this->documentStore); $i++) {
             if ($this->documentStore[$i]['guid'] == $guid) {
-                array_splice($this->documentStore, $i);
+                $this->documentStore =
+                    $this->removeArrayElement(
+                        $this->documentStore,
+                        $i
+                    );
                 return;
             }
         }
