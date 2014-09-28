@@ -38,7 +38,7 @@ class EvernoteTest extends PHPUnit_Framework_TestCase
         
         $note = new Note();
         $note->exchangeArray($this->note[0]);
-        $evernote->createNote($note);
+        $evernote->updateNote($note);
         
         $this->assertEquals($evernote->getDocumentCount(), 1);
         
@@ -81,7 +81,7 @@ class EvernoteTest extends PHPUnit_Framework_TestCase
         for ($i=0; $i<3; $i++) {
             $note = new Note();
             $note->exchangeArray($this->note[$i]);
-            $evernote->createNote($note);
+            $evernote->updateNote($note);
         }
     
         $this->assertEquals($evernote->getDocumentCount(), 3);
@@ -109,7 +109,7 @@ class EvernoteTest extends PHPUnit_Framework_TestCase
         for ($i=0; $i<3; $i++) {
             $note = new Note();
             $note->exchangeArray($this->note[$i]);
-            $evernote->createNote($note);
+            $evernote->updateNote($note);
         }
     
         $this->assertEquals($evernote->getDocumentCount(), 3);
@@ -153,6 +153,12 @@ class EvernoteTest extends PHPUnit_Framework_TestCase
             $evernote->go($inputFile, $outputFile);
             $this->assertFileEquals($expectedOutput, $outputFile, 'Test case ' . $i);
         }
+    }
+    
+    public function testLoad()
+    {
+        $evernote = new Evernote();
+        $evernote->go('inputload', 'outputload');
     }
 
 }

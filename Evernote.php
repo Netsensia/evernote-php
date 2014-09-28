@@ -86,6 +86,10 @@ class Note
      */
     public function setTag($tag)
     {
+        if (!is_array($tag)) {
+            $tag = [$tag];
+        }
+        
         $this->tag = $tag;
     }
 
@@ -118,7 +122,8 @@ class Note
      */
     public function setCreated($created)
     {
-        $this->created = $created;
+        $absoluteTime = str_replace('Z', '+0000', $created);
+        $this->created = strtotime($absoluteTime);
     }
 
     public function getArrayCopy()
@@ -150,9 +155,7 @@ class Note
     {
         $this->setGuid($array['guid']);
         $this->setContent($array['content']);
-        
-        $absoluteTime = str_replace('Z', '+0000', $array['created']);
-        $this->setCreated(strtotime($absoluteTime));
+        $this->setCreated($array['created']);
         
         if (isset($array['tag'])) {
             if (is_array($array['tag'])) {
@@ -192,22 +195,23 @@ class Evernote
     function getXmlString($fp)
     {
         $xmlString = '';
-        while (!feof($fp) && ($line = chop(fgets($fp))) != '</note>') {
+        
+        while ($line = fgets($fp)) {
             $xmlString .= $line;
+            if (preg_match('/^<\/note>/', $line)) {
+                break;
+            }
         }
         
-        if (feof($fp)) {
-            throw new Exception('No valid XML found');
-        }
+        $xmlString = preg_replace('/&/', '&amp;', $xmlString);
         
-        $xmlString = preg_replace('/&(?!#?[a-z0-9]+;)/', '&amp;', $xmlString);
-        
-        return trim($xmlString) . '</note>';
+        return trim($xmlString);
     }
     
     function makeNoteFromXml($xmlString)
     {
         $xmlObj = simplexml_load_string($xmlString);
+        
         $json = json_encode($xmlObj);
         $noteArray = json_decode($json, true);
         $note = new Note();
@@ -220,11 +224,6 @@ class Evernote
     {
         $xmlString = $this->getXmlString($fp);
         return $this->makeNoteFromXml($xmlString);
-    }
-    
-    function createNote($note)
-    {
-        $this->updateNote($note);
     }
     
     function updateNote($note)
@@ -361,15 +360,12 @@ class Evernote
     {
         $fp = fopen($input, "r");
         $fpo = fopen($output, "w");
-        
+
         while (!feof($fp)) {
             
-            $command = chop(fgets($fp));
+            fscanf($fp, "%s\n", $command);
             switch ($command) {
                 case 'CREATE':
-                    $note = $this->readNote($fp);
-                    $this->createNote($note);
-                    break;
                 case 'UPDATE':
                     $note = $this->readNote($fp);
                     $this->updateNote($note);
