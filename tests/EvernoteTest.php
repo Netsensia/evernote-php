@@ -116,4 +116,10 @@ class EvernoteTest extends PHPUnit_Framework_TestCase
         $this->assertFileEquals('expected2', 'output2');
     }
     
+    public function testInput3()
+    {
+        $evernote = new Evernote();
+        $evernote->go('input3', 'output3');
+        $this->assertFileEquals('expected3', 'output3');
+    }
 }

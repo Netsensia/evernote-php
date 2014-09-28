@@ -295,7 +295,7 @@ class Evernote
     {
         $onOrAfter = strtotime($term);
     
-        if ($note->getCreated() > $onOrAfter) {
+        if ($note->getCreated() >= $onOrAfter) {
             return true;
         }
     
@@ -310,6 +310,8 @@ class Evernote
         $words = explode(' ', $content);
         
         foreach ($words as $word) {
+            $word = preg_replace("/^[^A-Za-z]+/", '', $word);
+            $word = preg_replace("/[^A-Za-z\']+$/", '', $word);
             if ($this->match($word, $keyword)) {
                 return true;
             }
