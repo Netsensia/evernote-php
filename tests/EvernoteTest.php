@@ -102,24 +102,57 @@ class EvernoteTest extends PHPUnit_Framework_TestCase
         $this->assertEquals($evernote->getDocumentCount(), 0);
     }
     
-    public function testInput1()
+    public function testUpdateNote()
     {
         $evernote = new Evernote();
-        $evernote->go('input1', 'output1');
-        $this->assertFileEquals('expected1', 'output1');
+    
+        for ($i=0; $i<3; $i++) {
+            $note = new Note();
+            $note->exchangeArray($this->note[$i]);
+            $evernote->createNote($note);
+        }
+    
+        $this->assertEquals($evernote->getDocumentCount(), 3);
+        $this->assertEquals($this->note[0], $evernote->getNote('GUID1')->getArrayCopy());
+        $this->assertEquals($this->note[1], $evernote->getNote('GUID2')->getArrayCopy());
+        $this->assertEquals($this->note[2], $evernote->getNote('GUID3')->getArrayCopy());
+    
+        $note = $evernote->getNote('GUID2');
+        $newContent = 'New Content';
+        $note->setContent($newContent);
+        $evernote->updateNote($note);
+        $newNote = $evernote->getNote('GUID2');
+        
+        $this->assertEquals($evernote->getDocumentCount(), 3);
+        $this->assertEquals($newContent, $newNote->getContent());
     }
     
-    public function testInput2()
+    public function testMatch()
     {
         $evernote = new Evernote();
-        $evernote->go('input2', 'output2');
-        $this->assertFileEquals('expected2', 'output2');
+        
+        // Simple match
+        $this->assertTrue($evernote->match('test', 'test'));   
+        $this->assertFalse($evernote->match('test2', 'test'));
+        
+        // Wildcard match
+        $this->assertTrue($evernote->match('test2', 'test*'));
+        $this->assertFalse($evernote->match('test2', 'test3*'));
+        $this->assertTrue($evernote->match('test2', 't*'));
+        $this->assertTrue($evernote->match('test2', 'test*'));
+        
     }
     
-    public function testInput3()
+    public function testInputs()
     {
-        $evernote = new Evernote();
-        $evernote->go('input3', 'output3');
-        $this->assertFileEquals('expected3', 'output3');
+        for ($i=1; $i<=4; $i++) {
+            $evernote = new Evernote();
+            $inputFile = 'input' . $i;
+            $outputFile = 'output' . $i;
+            $expectedOutput = 'expected' . $i;
+            $evernote->go($inputFile, $outputFile);
+            $this->assertFileEquals($expectedOutput, $outputFile, 'Test case ' . $i);
+        }
     }
+
 }

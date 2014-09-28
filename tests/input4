@@ -1,0 +1,61 @@
+CREATE
+<note>
+  <guid>0E5EA61D-1807-4B1D-A812-34462D2F71E9</guid>
+  <created>2014-05-03T00:00:00Z</created>
+  <tag>poetry</tag>
+  <tag>byron</tag>
+  <content>
+    The Son of Love and Lord of War I sing;
+    Him who bade England bow to Normandy,
+    And left the name of Conqueror more than King
+    To his unconquerable dynasty.
+    We're going to the circus!
+    Not fanned alone by Victory's fleeting wing,
+    He reared his bold and brilliant throne on high;
+    The Bastard kept, like lions, his prey fast,
+    And Britain's bravest Victor was the last.
+  </content>
+</note>
+CREATE
+<note>
+  <guid>450E1369-9D9D-4168-8969-2A4DCC8DDEC4</guid>
+  <created>2014-05-02T23:59:59Z</created>
+  <tag>poetry</tag>
+  <tag>byron</tag>
+  <content>
+    Famed for their civil and domestic quarrels
+    See heartless Henry lies by headless Charles;
+    Between them stands another sceptred thing,
+    It lives, it reigns - "aye, every inch a king."
+    Charles to his people, Henry to his wife,
+    In him the double tyrant starts to life:
+    Justice and Death have mixed their dust in vain.
+    The royal Vampires join and rise again.
+    What now can tombs avail, since these disgorge
+    The blood and dirt of both to mould a George!
+  </content>
+</note>
+CREATE
+<note>
+  <guid>719FF07B-CF0B-4E09-BCB9-336ECE6C2636</guid>
+  <created>2014-05-02T22:59:59Z</created>
+  <tag>poetry</tag>
+  <tag>byron</tag>
+  <content>
+    Unhappy Dives! in an evil hour
+    'Gainst Nature's voice seduced to deeds accurst!
+    Once Fortune's minion now thou feel'st her power;
+    Wrath's vial on thy lofty head hath burst.
+    In Wit, in Genius, as in Wealth the first,
+    How wondrous bright thy blooming morn arose!
+    But thou wert smitten with th' unhallowed thirst
+    Of Crime unnamed, and thy sad noon must close
+    In scorn and solitude unsought the worst of woes.
+  </content>
+</note>
+SEARCH
+britain's
+SEARCH
+britain
+SEARCH
+created:20140503 we're

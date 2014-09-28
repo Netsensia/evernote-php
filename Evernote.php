@@ -150,11 +150,14 @@ class Note
     {
         $this->setGuid($array['guid']);
         $this->setContent($array['content']);
-        $this->setCreated(strtotime($array['created']));
+        
+        $absoluteTime = str_replace('Z', '+0000', $array['created']);
+        $this->setCreated(strtotime($absoluteTime));
         
         if (isset($array['tag'])) {
             if (is_array($array['tag'])) {
                 $tag = $array['tag'];
+
             } else {
                 $tag = [$array['tag']];
             }
@@ -221,7 +224,7 @@ class Evernote
     
     function createNote($note)
     {
-        $this->noteDatabase[] = $note;
+        $this->updateNote($note);
     }
     
     function updateNote($note)
@@ -229,8 +232,10 @@ class Evernote
         foreach ($this->noteDatabase as &$storedNote) {
             if ($storedNote->getGuid() == $note->getGuid()) {
                 $storedNote = $note;
+                return;
             }
         }
+        $this->noteDatabase[] = $note;
     }
     
     function removeArrayElement($array, $i)
@@ -264,19 +269,19 @@ class Evernote
         $string = strtolower(trim($string));
         $term = strtolower(trim($term));
         
-        if ($string == '') {
-            return;
-        }
         $wildcardAt = strpos($term, '*');
         
+        $isMatch = false;
+        
         if ($wildcardAt === false) {
-            return $string == $term;
+            $isMatch = ($string == $term);
+        } else {
+            $compareStringPart = substr($string, 0, $wildcardAt);
+            $compareTermPart = substr($term, 0, $wildcardAt);
+            $isMatch = $compareStringPart == $compareTermPart;
         }
         
-        $compareStringPart = substr($string, 0, $wildcardAt);
-        $compareTermPart = substr($term, 0, $wildcardAt);
-        
-        return $compareStringPart == $compareTermPart;
+        return $isMatch;
     }
     
     function hasTag($note, $term)
@@ -293,7 +298,7 @@ class Evernote
     
     function createdOnOrAfter($note, $term)
     {
-        $onOrAfter = strtotime($term);
+        $onOrAfter = strtotime($term . 'T00:00:00+0000');
     
         if ($note->getCreated() >= $onOrAfter) {
             return true;
@@ -306,14 +311,13 @@ class Evernote
     {
         $content = $note->getContent();
         
-        $content = preg_replace("/[^\w\ _\'\-]+/", '', $content);
-        $words = explode(' ', $content);
+        $words = preg_split('/[^A-Za-z0-9\']/', $content);
         
         foreach ($words as $word) {
-            $word = preg_replace("/^[^A-Za-z]+/", '', $word);
-            $word = preg_replace("/[^A-Za-z\']+$/", '', $word);
-            if ($this->match($word, $keyword)) {
-                return true;
+            if (trim($word) != '') {
+                if ($this->match($word, $keyword)) {
+                    return true;
+                }
             }
         }
         return false;
@@ -388,9 +392,6 @@ class Evernote
                         fprintf($fpo, substr($results, 0, strlen($results)-1) . PHP_EOL);
                     }
                     break;
-                default:
-                    echo 'Error: No valid command found';
-                    die;
             }
         }
         
@@ -398,6 +399,3 @@ class Evernote
         fclose($fp);
     }
 }
-
-
-
