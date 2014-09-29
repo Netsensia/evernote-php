@@ -50,9 +50,10 @@ class NoteStore
     function hasTag(Note $note, $term)
     {
         $tags = $note->getTag();
+        $wildcardAt = strpos($term, '*');
         
         foreach ($tags as $tag) {
-            if (Util::match($tag, $term)) {
+            if (Util::match($tag, $term, $wildcardAt)) {
                 return true;
             }
         }
@@ -86,11 +87,11 @@ class NoteStore
      */
     function hasKeyword(Note $note, $keyword)
     {
-        $keyword = strtolower(trim($keyword));
         $words = $note->getWords();
+        $wildcardAt = strpos($keyword, '*');
         
         foreach ($words as $word) {
-            if (Util::match($word, $keyword)) {
+            if (Util::match($word, $keyword, $wildcardAt)) {
                 return true;
             }
         }
@@ -308,6 +309,11 @@ class Note
     {
         $this->content = $content;
 
+        /*
+         * Split on any character that is not alphanumeric, apostrophe or space
+         * This will remove any such characters from the content except
+         * for those embedded within words
+         */
         $words = preg_split('/[^A-Za-z0-9\']/', strtolower($content));
         $newWords = [];
         foreach ($words as $word) {
@@ -333,8 +339,7 @@ class Note
      */
     public function setCreated($created)
     {
-        $absoluteTime = str_replace('Z', '+0000', $created);
-        $this->created = strtotime($absoluteTime);
+        $this->created = strtotime($created);
     }
 
     public function getArrayCopy()
@@ -406,7 +411,7 @@ class Util
 
         $xmlString = preg_replace('/&/', '&amp;', $xmlString);
 
-        return trim($xmlString);
+        return $xmlString;
     }
 
     static public function makeNoteFromXml($xmlString)
@@ -433,18 +438,12 @@ class Util
         return Util::makeNoteFromXml($xmlString);
     }
 
-    static public function match($string, $term)
+    static public function match($string, $term, $wildcardAt)
     {
-        $string = trim($string);
-
-        $wildcardAt = strpos($term, '*');
-
         if ($wildcardAt === false) {
-            return ($string == $term);
+            return $string == $term;
         } else {
-            $compareStringPart = substr($string, 0, $wildcardAt);
-            $compareTermPart = substr($term, 0, $wildcardAt);
-            return $compareStringPart == $compareTermPart;
+            return substr_compare($string, $term, 0, $wildcardAt) == 0;
         }
     }
 }

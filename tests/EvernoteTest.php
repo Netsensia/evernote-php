@@ -123,14 +123,14 @@ class NoteStoreTest extends PHPUnit_Framework_TestCase
         $noteStore = new NoteStore();
         
         // Simple match
-        $this->assertTrue(Util::match('test', 'test'));   
-        $this->assertFalse(Util::match('test2', 'test'));
+        $this->assertTrue(Util::match('test', 'test', false));   
+        $this->assertFalse(Util::match('test2', 'test', false));
         
         // Wildcard match
-        $this->assertTrue(Util::match('test2', 'test*'));
-        $this->assertFalse(Util::match('test2', 'test3*'));
-        $this->assertTrue(Util::match('test2', 't*'));
-        $this->assertTrue(Util::match('test2', 'test*'));
+        $this->assertTrue(Util::match('test2', 'test', 4));
+        $this->assertFalse(Util::match('test2', 'test3', 5));
+        $this->assertTrue(Util::match('test2', 't', 1));
+        $this->assertTrue(Util::match('test2', 'test', 4));
         
     }
     
@@ -149,6 +149,6 @@ class NoteStoreTest extends PHPUnit_Framework_TestCase
     public function testLoad()
     {
         $noteStore = new NoteReader();
-        $noteStore->go('inputload', 'outputload');
+        $noteStore->go('inputload', '/dev/null');
     }
 }
