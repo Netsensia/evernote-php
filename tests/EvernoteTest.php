@@ -37,9 +37,10 @@ class NoteStoreTest extends PHPUnit_Framework_TestCase
         $note = new Note();
         $note->exchangeArray($this->note[0]);
         $this->assertTrue($note->hasKeyword('son'));
-        $this->assertTrue($note->hasPartWord('so'));
+        $this->assertTrue($note->hasKeyword('so*', 2));
+        $this->assertTrue($note->hasKeyword('*', 0));
         $this->assertTrue($note->hasKeyword("britain's"));
-        $this->assertFalse($note->hasPartWord('lion'));
+        $this->assertFalse($note->hasKeyword('lion'));
     }
     
     public function testCreateNote()
@@ -143,6 +144,7 @@ class NoteStoreTest extends PHPUnit_Framework_TestCase
     public function testLoad()
     {
         $noteStore = new NoteReader();
-        $noteStore->go('inputload', '/dev/null');
+        $noteStore->go('inputload', 'outputload');
+        $this->assertFileEquals('expectedload', 'outputload', 'Test case ' . $i);
     }
 }

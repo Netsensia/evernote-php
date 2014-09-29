@@ -11,7 +11,7 @@ class NoteStore
     /**
      * An array of type Note
      */
-    private $notes = [];
+    private $noteDatabase = [];
 
     /**
      * getNoteCount
@@ -20,7 +20,7 @@ class NoteStore
      */
     public function getNoteCount()
     {
-        return count($this->notes);
+        return count($this->noteDatabase);
     }
     
     /**
@@ -31,7 +31,7 @@ class NoteStore
      */
     function getNote($guid)
     {
-        foreach ($this->notes as &$storedNote) {
+        foreach ($this->noteDatabase as &$storedNote) {
             if ($storedNote->getGuid() == $guid) {
                 return $storedNote;
             }
@@ -63,26 +63,16 @@ class NoteStore
         
         $noteCollection = new NoteCollection();
         
-        foreach ($this->notes as $note) {
+        foreach ($this->noteDatabase as $note) {
             $matchesAll = true;
             foreach ($words as $word) {
                 $keyword = $word['term'];
-                if ($keyword == '*') {
-                    continue;
-                }
                 $wildcardAt = $word['wildcardAt'];
 
                 if (preg_match('/^tag:(.*)/', $keyword, $matches)) {
-                    if ($wildcardAt === false) {
-                        if (!$note->hasTag($matches[1])) {
-                            $matchesAll = false;
-                            break;
-                        }
-                    } else {
-                        if (!$note->hasPartTag($matches[1], $wildcardAt - 4)) {
-                            $matchesAll = false;
-                            break;
-                        }
+                    if (!$note->hasTag($matches[1], ($wildcardAt === false ? false : $wildcardAt - 4))) {
+                        $matchesAll = false;
+                        break;
                     }
                 } elseif (preg_match('/^created:(.*)/', $keyword, $matches)) {
                     if (!$note->createdOnOrAfter($matches[1])) {
@@ -90,16 +80,9 @@ class NoteStore
                         break;
                     }
                 } else {
-                    if ($wildcardAt === false) {
-                        if (!$note->hasKeyword($keyword)) {
-                            $matchesAll = false;
-                            break;
-                        }
-                    } else {
-                        if (!$note->hasPartWord(substr($keyword, 0, strlen($keyword)-1))) {
-                            $matchesAll = false;
-                            break;
-                        }
+                    if (!$note->hasKeyword($keyword, $wildcardAt)) {
+                        $matchesAll = false;
+                        break;
                     }
                 }
             }
@@ -120,7 +103,7 @@ class NoteStore
      */
     function deleteNote($guid)
     {
-        unset($this->notes[$guid]);
+        unset($this->noteDatabase[$guid]);
     }
     
     /**
@@ -131,7 +114,7 @@ class NoteStore
      */
     function updateNote($note)
     {
-        $this->notes[$note->getGuid()] = $note;
+        $this->noteDatabase[$note->getGuid()] = $note;
     }
 }
 
@@ -211,13 +194,29 @@ class Note
     /**
      * @var array
      */
-    private $wordPieces;
+    private $words;
     
     /**
      * @var array
      */
     private $wordIndex;
     
+    /**
+     * @return the $words
+     */
+    public function getWords()
+    {
+        return $this->words;
+    }
+
+    /**
+     * @param multitype: $words
+     */
+    public function setWords($words)
+    {
+        $this->words = $words;
+    }
+
     /**
      * @return the $guid
      */
@@ -269,48 +268,33 @@ class Note
      * @param number $wildcardAt - The position of the wildcard char, or false
      * @return boolean true if note content contains $keyword
      */
-    function hasKeyword($keyword)
+    function hasKeyword($keyword, $wildcardAt = false)
     {
-        return isset($this->wordIndex[$keyword]);
-    }
-    
-    /**
-     * hasPartWord
-     *
-     * @param string $partword
-     * @param number $wildcardAt - The position of the wildcard char, or false
-     * @return boolean true if note content contains $keyword
-     */
-    function hasPartWord($partWord)
-    {
-        return isset($this->wordPieces[$partWord]);
+        if ($wildcardAt === false) {
+            return isset($this->wordIndex[$keyword]);
+        }
+        
+        foreach ($this->words as $word) {
+            if (substr_compare($word, $keyword, 0, $wildcardAt) == 0) return true;
+        }
+        return false;
     }
     
     /**
      * hasTag
      *
      * @param string $term
-     * @return boolean true if note has associated tag, otherwise false
-     */
-    function hasTag($term)
-    {
-        foreach ($this->tags as $tag) {
-            if ($tag == $term) return true;
-        }
-        return false;
-    }
-    
-    /**
-     * hasPartTag
-     *
-     * @param string $term
      * @param number $wildcardAt - The position of the wildcard char, or false
      * @return boolean true if note has associated tag, otherwise false
      */
-    function hasPartTag($term, $wildcardAt)
+    function hasTag($term, $wildcardAt)
     {
         foreach ($this->tags as $tag) {
-            if (substr_compare($tag, $term, 0, $wildcardAt) == 0) return true;
+            if ($wildcardAt === false) {
+                if ($tag == $term) return true;
+            } else {
+                if (substr_compare($tag, $term, 0, $wildcardAt) == 0) return true;
+            }
         }
         return false;
     }
@@ -343,13 +327,15 @@ class Note
          * for those embedded within words
          */
         $words = preg_split('/[^A-Za-z0-9\']/', strtolower($content));
+        $newWords = [];
         foreach ($words as $word) {
-            $wordPart = '';
-            foreach (str_split($word) as $char) {
-                $this->wordPieces[$wordPart .= $char] = true;
+            if ($word != '') {
+                $newWords[] = $word;
+                $this->wordIndex[$word] = true;
             }
-            $this->wordIndex[$word] = true;
         }
+
+        $this->words = $newWords;
     }
 
     /**
@@ -479,6 +465,7 @@ class NoteReader
         $fp = fopen($input, "r");
         $fpo = fopen($output, "w");
     
+        $uniqueId = 1;
         while (!feof($fp)) {
     
             fscanf($fp, "%s\n", $command);
@@ -487,7 +474,7 @@ class NoteReader
                 case 'UPDATE':
                     $note = Util::readXml($fp, 'note');
                     if ($input == 'inputload') {
-                        $note->setGuid(uniqid());
+                        $note->setGuid(++$uniqueId);
                     }
                     $noteStore->updateNote($note);
                     break;
