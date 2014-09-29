@@ -41,64 +41,6 @@ class NoteStore
     }
     
     /**
-     * hasTag
-     * 
-     * @param Note $note
-     * @param string $term
-     * @return boolean true if note has associated tag, otherwise false
-     */
-    function hasTag(Note $note, $term)
-    {
-        $tags = $note->getTag();
-        $wildcardAt = strpos($term, '*');
-        
-        foreach ($tags as $tag) {
-            if (Util::match($tag, $term, $wildcardAt)) {
-                return true;
-            }
-        }
-        return false;
-    }
-    
-    /**
-     * createdOnOrAfter
-     *
-     * @param Note $note
-     * @param string $dateString
-     * @return boolean true if note was created on or after $dateString
-     */
-    function createdOnOrAfter($note, $dateString)
-    {
-        $onOrAfter = strtotime($dateString . 'T00:00:00+0000');
-    
-        if ($note->getCreated() >= $onOrAfter) {
-            return true;
-        }
-    
-        return false;
-    }
-    
-    /**
-     * hasKeyword
-     *
-     * @param Note $note
-     * @param string $keyword
-     * @return boolean true if note content contains $keyword
-     */
-    function hasKeyword(Note $note, $keyword)
-    {
-        $words = $note->getWords();
-        $wildcardAt = strpos($keyword, '*');
-        
-        foreach ($words as $word) {
-            if (Util::match($word, $keyword, $wildcardAt)) {
-                return true;
-            }
-        }
-        return false;
-    }
-    
-    /**
      * search
      *
      * Parse the search term and return the GUIDS of all matching notes
@@ -112,24 +54,36 @@ class NoteStore
         $term = strtolower($term);
         $words = explode(' ', $term);
         
+        for ($i=0; $i<count($words); $i++) {
+            $words[$i] = [
+                'term' => $words[$i],
+                'wildcardAt' => strpos($words[$i], '*')  
+            ];
+        }
+        
         $noteCollection = new NoteCollection();
         
         foreach ($this->noteDatabase as $note) {
             $matchesAll = true;
             foreach ($words as $word) {
-                if (preg_match('/^tag:(.*)/', $word, $matches)) {
-                    $func = 'hasTag';
-                    $word = $matches[1];
-                } elseif (preg_match('/^created:(.*)/', $word, $matches)) {
-                    $func = 'createdOnOrAfter';
-                    $word = $matches[1];
+                $keyword = $word['term'];
+                $wildcardAt = $word['wildcardAt'];
+
+                if (preg_match('/^tag:(.*)/', $keyword, $matches)) {
+                    if (!$note->hasTag($matches[1], ($wildcardAt === false ? false : $wildcardAt - 4))) {
+                        $matchesAll = false;
+                        break;
+                    }
+                } elseif (preg_match('/^created:(.*)/', $keyword, $matches)) {
+                    if (!$note->createdOnOrAfter($matches[1])) {
+                        $matchesAll = false;
+                        break;
+                    }
                 } else {
-                    $func = 'hasKeyword';
-                }
-                    
-                if (!$this->$func($note, $word)) {
-                    $matchesAll = false;
-                    break;
+                    if (!$note->hasKeyword($keyword, $wildcardAt)) {
+                        $matchesAll = false;
+                        break;
+                    }
                 }
             }
             if ($matchesAll) {
@@ -223,7 +177,7 @@ class Note
     /**
      * @var array
      */
-    private $tag;
+    private $tags;
 
     /**
      * @var string
@@ -241,7 +195,12 @@ class Note
      * @var array
      */
     private $words;
-
+    
+    /**
+     * @var array
+     */
+    private $wordIndex;
+    
     /**
      * @return the $words
      */
@@ -275,23 +234,23 @@ class Note
     }
 
     /**
-     * @return the $tag
+     * @return the $tags
      */
-    public function getTag()
+    public function getTags()
     {
-        return $this->tag;
+        return $this->tags;
     }
 
     /**
-     * @param multitype: $tag
+     * @param multitype: $tags
      */
-    public function setTag($tag)
+    public function setTags($tag)
     {
         if (!is_array($tag)) {
             $tag = [$tag];
         }
 
-        $this->tag = $tag;
+        $this->tags = $tag;
     }
 
     /**
@@ -302,6 +261,59 @@ class Note
         return $this->content;
     }
 
+    /**
+     * hasKeyword
+     *
+     * @param string $keyword
+     * @param number $wildcardAt - The position of the wildcard char, or false
+     * @return boolean true if note content contains $keyword
+     */
+    function hasKeyword($keyword, $wildcardAt)
+    {
+        if ($wildcardAt === false) {
+            return isset($this->wordIndex[$keyword]);
+        }
+        
+        foreach ($this->words as $word) {
+            if (substr_compare($word, $keyword, 0, $wildcardAt) == 0) return true;
+        }
+        return false;
+    }
+    
+    /**
+     * hasTag
+     *
+     * @param string $term
+     * @param number $wildcardAt - The position of the wildcard char, or false
+     * @return boolean true if note has associated tag, otherwise false
+     */
+    function hasTag($term, $wildcardAt)
+    {
+        foreach ($this->tags as $tag) {
+            if ($wildcardAt === false) {
+                if ($tag == $term) return true;
+            } else {
+                if (substr_compare($tag, $term, 0, $wildcardAt) == 0) return true;
+            }
+        }
+        return false;
+    }
+    
+    /**
+     * createdOnOrAfter
+     *
+     * @param string $dateString
+     * @return boolean true if note was created on or after $dateString
+     */
+    function createdOnOrAfter($dateString)
+    {
+        if ($this->created >= strtotime($dateString . 'T00:00:00+0000')) {
+            return true;
+        }
+    
+        return false;
+    }
+    
     /**
      * @param string $content
      */
@@ -317,13 +329,13 @@ class Note
         $words = preg_split('/[^A-Za-z0-9\']/', strtolower($content));
         $newWords = [];
         foreach ($words as $word) {
-            $word = trim($word);
             if ($word != '') {
                 $newWords[] = $word;
+                $this->wordIndex[$word] = true;
             }
         }
 
-        $this->setWords($newWords);
+        $this->words = $newWords;
     }
 
     /**
@@ -348,12 +360,12 @@ class Note
             'guid' => $this->guid,
         ];
 
-        if (count($this->tag) == 1) {
-            $array['tag'] = $this->tag[0];
+        if (count($this->tags) == 1) {
+            $array['tag'] = $this->tags[0];
         }
 
-        if (count($this->tag) > 1) {
-            $array['tag'] = $this->tag;
+        if (count($this->tags) > 1) {
+            $array['tag'] = $this->tags;
         }
 
         $array = array_merge(
@@ -389,7 +401,7 @@ class Note
             $tag = [];
         }
 
-        $this->setTag($tag);
+        $this->setTags($tag);
     }
 }
 
@@ -436,15 +448,6 @@ class Util
     {
         $xmlString = Util::getXmlString($fp, $tag);
         return Util::makeNoteFromXml($xmlString);
-    }
-
-    static public function match($string, $term, $wildcardAt)
-    {
-        if ($wildcardAt === false) {
-            return $string == $term;
-        } else {
-            return substr_compare($string, $term, 0, $wildcardAt) == 0;
-        }
     }
 }
 

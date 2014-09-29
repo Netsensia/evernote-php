@@ -123,14 +123,14 @@ class NoteStoreTest extends PHPUnit_Framework_TestCase
         $noteStore = new NoteStore();
         
         // Simple match
-        $this->assertTrue(Util::match('test', 'test', false));   
-        $this->assertFalse(Util::match('test2', 'test', false));
+//         $this->assertTrue(Util::match('test', 'test', false));   
+//         $this->assertFalse(Util::match('test2', 'test', false));
         
-        // Wildcard match
-        $this->assertTrue(Util::match('test2', 'test', 4));
-        $this->assertFalse(Util::match('test2', 'test3', 5));
-        $this->assertTrue(Util::match('test2', 't', 1));
-        $this->assertTrue(Util::match('test2', 'test', 4));
+//         // Wildcard match
+//         $this->assertTrue(Util::match('test2', 'test', 4));
+//         $this->assertFalse(Util::match('test2', 'test3', 5));
+//         $this->assertTrue(Util::match('test2', 't', 1));
+//         $this->assertTrue(Util::match('test2', 'test', 4));
         
     }
     
