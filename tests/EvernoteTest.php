@@ -15,7 +15,7 @@ class NoteStoreTest extends PHPUnit_Framework_TestCase
                 'byron',
             ],
             'content' =>
-                'The Son of Love and Lord of War I sing; '
+                "The Son of Love and Lord of War I sing Britain's; "
         ],
         [
             'guid' => 'GUID2',
@@ -31,6 +31,16 @@ class NoteStoreTest extends PHPUnit_Framework_TestCase
                 'The Bastard kept, like lions, his prey fast, '
         ],
     ];
+    
+    public function testHasKeyword()
+    {
+        $note = new Note();
+        $note->exchangeArray($this->note[0]);
+        $this->assertTrue($note->hasKeyword('son'));
+        $this->assertTrue($note->hasPartWord('so'));
+        $this->assertTrue($note->hasKeyword("britain's"));
+        $this->assertFalse($note->hasPartWord('lion'));
+    }
     
     public function testCreateNote()
     {
@@ -116,22 +126,6 @@ class NoteStoreTest extends PHPUnit_Framework_TestCase
         
         $this->assertEquals($noteStore->getNoteCount(), 3);
         $this->assertEquals($newContent, $newNote->getContent());
-    }
-    
-    public function testMatch()
-    {
-        $noteStore = new NoteStore();
-        
-        // Simple match
-//         $this->assertTrue(Util::match('test', 'test', false));   
-//         $this->assertFalse(Util::match('test2', 'test', false));
-        
-//         // Wildcard match
-//         $this->assertTrue(Util::match('test2', 'test', 4));
-//         $this->assertFalse(Util::match('test2', 'test3', 5));
-//         $this->assertTrue(Util::match('test2', 't', 1));
-//         $this->assertTrue(Util::match('test2', 'test', 4));
-        
     }
     
     public function testInputs()
