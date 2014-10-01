@@ -320,7 +320,6 @@ class Note
     public function setContent($content)
     {
         $this->content = $content;
-
         /*
          * Split on any character that is not alphanumeric, apostrophe or space
          * This will remove any such characters from the content except
@@ -464,8 +463,8 @@ class NoteReader
         
         $fp = fopen($input, "r");
         $fpo = fopen($output, "w");
-    
-        $uniqueId = 1;
+
+        $searchNum = 1;
         while (!feof($fp)) {
     
             fscanf($fp, "%s\n", $command);
@@ -473,9 +472,6 @@ class NoteReader
                 case 'CREATE':
                 case 'UPDATE':
                     $note = Util::readXml($fp, 'note');
-                    if ($input == 'inputload') {
-                        $note->setGuid(++$uniqueId);
-                    }
                     $noteStore->updateNote($note);
                     break;
                 case 'DELETE':
@@ -502,3 +498,9 @@ class NoteReader
         fclose($fp);
     }
 }
+
+$noteReader = new NoteReader();
+$noteReader->go(
+// '/Users/chris/git/evernote/tests/inputrandom'
+);
+
