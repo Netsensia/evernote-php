@@ -2,8 +2,6 @@
 include '../vendor/autoload.php';
 include '../NoteStore.php';
 
-define('RUNNING_UNIT_TESTS', true);
-
 class NoteStoreTest extends PHPUnit_Framework_TestCase
 {
     private $note = [
@@ -131,7 +129,7 @@ class NoteStoreTest extends PHPUnit_Framework_TestCase
     
     public function testInputs()
     {
-        for ($i=1; $i<=4; $i++) {
+        for ($i=1; $i<=3; $i++) {
             $noteStore = new NoteReader();
             $inputFile = 'input' . $i;
             $outputFile = 'output' . $i;
@@ -139,12 +137,5 @@ class NoteStoreTest extends PHPUnit_Framework_TestCase
             $noteStore->go($inputFile, $outputFile);
             $this->assertFileEquals($expectedOutput, $outputFile, 'Test case ' . $i);
         }
-    }
-    
-    public function testLoad()
-    {
-        $noteStore = new NoteReader();
-        $noteStore->go('inputload', 'outputload');
-        $this->assertFileEquals('expectedload', 'outputload', 'Test case ' . $i);
     }
 }

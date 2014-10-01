@@ -499,8 +499,5 @@ class NoteReader
     }
 }
 
-$noteReader = new NoteReader();
-$noteReader->go(
-// '/Users/chris/git/evernote/tests/inputrandom'
-);
+
 
